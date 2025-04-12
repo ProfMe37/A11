@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barkod Okuyucu ve Ürün Bilgisi</title>
+    <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #main-menu, #sub-menu {
+            margin: 20px;
+        }
+
+        .menu-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .menu-btn:hover {
+            background-color: #45a049;
+        }
+
+        .category {
+            display: none;
+            margin-top: 20px;
+        }
+
+        #product-info, #search-info {
+            margin-top: 20px;
+        }
+
+        input, button {
+            padding: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        p {
+            font-size: 16px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Ana Menü -->
+    <div id="main-menu">
+        <h1>Barkod Okuyucu ve Ürün Bilgisi</h1>
+        <button class="menu-btn" onclick="showCategory('product-register')">Ürün Kayıt Et</button>
+        <button class="menu-btn" onclick="showCategory('manual-register')">Ürün Kayıt Et (Manuel)</button>
+        <button class="menu-btn" onclick="showCategory('manual-search')">Ürün Ara (Manual)</button>
+        <button class="menu-btn" onclick="showCategory('automatic-search')">Ürün Ara (Otomatik)</button>
+    </div>
+
+    <!-- Alt Menüler -->
+    <div id="sub-menu">
+        <button class="menu-btn" onclick="showMainMenu()">Ana Menüye Dön</button>
+    </div>
+
+    <!-- Ürün Kayıt Et Kategorisi -->
+    <div id="product-register" class="category">
+        <h2>Ürün Kayıt Et</h2>
+        <div id="video-container">
+            <video id="video" width="100%" height="100%" autoplay></video>
+        </div>
+        <div>
+            <label for="barcode">Barkod:</label>
+            <input type="text" id="barcode" readonly placeholder="Barkod burada görünecek">
+        </div>
+        <div>
+            <label for="price">Fiyat:</label>
+            <input type="number" id="price" placeholder="Fiyatı girin" min="0" step="0.01">
+        </div>
+        <div>
+            <label for="manufacturer">Üretici Bilgisi:</label>
+            <input type="text" id="manufacturer" placeholder="Üretici adını girin">
+        </div>
+        <div>
+            <button onclick="saveProductInfo()">Ürün Bilgilerini Kaydet</button>
+        </div>
+        <p id="product-status"></p>
+    </div>
+
+    <!-- Ürün Kayıt Et (Manuel) -->
+    <div id="manual-register" class="category">
+        <h2>Ürün Kayıt Et (Manuel)</h2>
+        <div>
+            <label for="manual-name">Ürün Adı:</label>
+            <input type="text" id="manual-name" placeholder="Ürün adını girin">
+        </div>
+        <div>
+            <label for="manual-price">Fiyat:</label>
+            <input type="number" id="manual-price" placeholder="Fiyatı girin" min="0" step="0.01">
+        </div>
+        <div>
+            <label for="manual-manufacturer">Üretici Bilgisi:</label>
+            <input type="text" id="manual-manufacturer" placeholder="Üretici adını girin">
+        </div>
+        <div>
+            <button onclick="saveManualProductInfo()">Manuel Ürün Kaydet</button>
+        </div>
+        <p id="manual-status"></p>
+    </div>
+
+    <!-- Ürün Ara (Manual) -->
+    <div id="manual-search" class="category">
+        <h2>Ürün Ara (Manual)</h2>
+        <div>
+            <label for="manual-search-name">Ürün Adı:</label>
+            <input type="text" id="manual-search-name" placeholder="Ürün adı ile ara">
+        </div>
+        <div>
+            <button onclick="searchManualProduct()">Ürün Ara</button>
+        </div>
+        <p id="search-status"></p>
+    </div>
+
+    <!-- Ürün Ara (Otomatik) -->
+    <div id="automatic-search" class="category">
+        <h2>Ürün Ara (Otomatik)</h2>
+        <div id="video-container">
+            <video id="video" width="100%" height="100%" autoplay></video>
+        </div>
+        <div>
+            <label for="barcode-search">Barkod:</label>
+            <input type="text" id="barcode-search" readonly placeholder="Barkod burada görünecek">
+        </div>
+        <div>
+            <button onclick="searchProductByBarcode()">Barkod ile Ürün Ara</button>
+        </div>
+        <p id="search-status"></p>
+    </div>
+
+    <script>
+        let products = []; // Ürün verilerini tutacak dizi
+
+        // Ana menüdeki kategorileri gösterme
+        function showCategory(category) {
+            const categories = document.querySelectorAll('.category');
+            categories.forEach(cat => cat.style.display = 'none'); // Tüm kategorileri gizle
+
+            const activeCategory = document.getElementById(category);
+            activeCategory.style.display = 'block'; // Seçilen kategoriyi göster
+
+            // Alt menüyü göster
+            document.getElementById('sub-menu').style.display = 'block';
+
+            // Ana menüyü gizle
+            document.getElementById('main-menu').style.display = 'none';
+        }
+
+        // Ana menüyü tekrar gösterme
+        function showMainMenu() {
+            document.getElementById('main-menu').style.display = 'block';
+            document.getElementById('sub-menu').style.display = 'none';
+
+            // Tüm kategorileri gizle
+            const categories = document.querySelectorAll('.category');
+            categories.forEach(cat => cat.style.display = 'none');
+        }
+
+        // Barkod okuma başlatma fonksiyonu
+        function startScanner() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    var videoElement = document.querySelector('#video');
+                    videoElement.srcObject = stream;
+
+                    Quagga.init({
+                        inputStream: {
+                            type: 'LiveStream',
+                            constraints: { facingMode: 'environment' },
+                            target: videoElement
+                        },
+                        decoder: { readers: ["code_128_reader", "ean_reader", "ean_8_reader", "upc_reader", "upc_e_reader"] }
+                    }, function(err) {
+                        if (err) {
+                            console.log(err);
+                            alert('Barkod tarayıcı başlatılamadı!');
+                            return;
+                        }
+                        Quagga.start();
+                    });
+
+                    Quagga.onDetected(function(result) {
+                        document.getElementById('barcode').value = result.codeResult.code;
+                        document.getElementById('barcode-search').value = result.codeResult.code;
+                    });
+                })
+                .catch(function(err) {
+                    console.error('Kamera erişimi sağlanamadı: ', err);
+                    alert('Kamera erişimi sağlanamadı!');
+                });
+        }
+
+        // Ürün bilgilerini kaydetme
+        function saveProductInfo() {
+            const barcode = document.getElementById('barcode').value;
+            const price = document.getElementById('price').value;
+            const manufacturer = document.getElementById('manufacturer').value;
+
+            if (!barcode || !price || !manufacturer) {
+                alert("Lütfen tüm bilgileri girin!");
+                return;
+            }
+
+            // Ürün verisini kaydet
+            products.push({ barcode, price, manufacturer });
+
+            document.getElementById('product-status').innerHTML = `
+                <strong>Ürün Bilgileri Kaydedildi:</strong><br>
+                Barkod: ${barcode}<br>
+                Fiyat: ${price} TL<br>
+                Üretici: ${manufacturer}
+            `;
+        }
+
+        // Manuel ürün bilgilerini kaydetme
+        function saveManualProductInfo() {
+            const name = document.getElementById('manual-name').value;
+            const price = document.getElementById('manual-price').value;
+            const manufacturer = document.getElementById('manual-manufacturer').value;
+
+            if (!name || !price || !manufacturer) {
+                alert("Lütfen tüm bilgileri girin!");
+                return;
+            }
+
+            // Ürün verisini kaydet
+            products.push({ name, price, manufacturer });
+
+            document.getElementById('manual-status').innerHTML = `
+                <strong>Manuel Ürün Bilgileri Kaydedildi:</strong><br>
+                Ürün Adı: ${name}<br>
+                Fiyat: ${price} TL<br>
+                Üretici: ${manufacturer}
+            `;
+        }
+
+        // Manuel ürün arama
+        function searchManualProduct() {
+            const searchName = document.getElementById('manual-search-name').value.toLowerCase();
+
+            const foundProduct = products.find(product => product.name.toLowerCase().includes(searchName));
+
+            if (foundProduct) {
+                document.getElementById('search-status').innerHTML = `
+                    <strong>Ürün Bulundu:</strong><br>
+                    Ürün Adı: ${foundProduct.name}<br>
+                    Fiyat: ${foundProduct.price} TL<br>
+                    Üretici: ${foundProduct.manufacturer}
+                `;
+            } else {
+                document.getElementById('search-status').innerHTML = 'Ürün bulunamadı!';
+            }
+        }
+
+        // Barkodla ürün arama
+        function searchProductByBarcode() {
+            const barcode = document.getElementById('barcode-search').value;
+
+            const foundProduct = products.find(product => product.barcode === barcode);
+
+            if (foundProduct) {
+                document.getElementById('search-status').innerHTML = `
+                    <strong>Ürün Bulundu:</strong><br>
+                    Barkod: ${foundProduct.barcode}<br>
+                    Fiyat: ${foundProduct.price} TL<br>
+                    Üretici: ${foundProduct.manufacturer}
+                `;
+            } else {
+                document.getElementById('search-status').innerHTML = 'Barkod ile ürün bulunamadı!';
+            }
+        }
+    </script>
+</body>
+</html>
